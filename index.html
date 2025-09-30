@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏗️ Crane System - LIFF App</title>
+    <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .liff-button {
+            background: #00B900;
+            color: white;
+            border-radius: 12px;
+            padding: 14px 20px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <div id="header" class="bg-green-600 text-white p-4 text-center">
+        <h1 class="text-2xl font-bold">🏗️ Crane System</h1>
+        <p class="text-green-100">กำลังโหลด...</p>
+    </div>
+
+    <!-- Main Content (จะแสดงหลังจาก LIFF เริ่มทำงาน) -->
+    <div id="main-content" class="hidden">
+        <!-- User Info -->
+        <div class="bg-white p-4 border-b">
+            <div class="flex items-center space-x-3">
+                <img id="user-picture" src="" class="w-12 h-12 rounded-full">
+                <div>
+                    <div id="user-name" class="font-semibold"></div>
+                    <div id="user-status" class="text-sm text-gray-600"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="p-4 space-y-3">
+            <button onclick="bookCrane()" class="w-full liff-button">
+                📞 จองเครน
+            </button>
+            
+            <button onclick="viewSchedule()" class="w-full liff-button" style="background: #0066CC;">
+                📅 ตารางงานวันนี้
+            </button>
+            
+            <button onclick="shareApp()" class="w-full liff-button" style="background: #FF6B00;">
+                🔗 แชร์แอป
+            </button>
+            
+            <button onclick="openMap()" class="w-full liff-button" style="background: #666666;">
+                🗺️ ดูแผนที่
+            </button>
+        </div>
+
+        <!-- Booking Form -->
+        <div class="bg-white m-4 rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">📝 สร้างงานยกใหม่</h2>
+            <form onsubmit="submitJob(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">ชื่องาน</label>
+                    <input type="text" id="jobName" required 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="เช่น ยกเสาเข็ม, ยกคานคอนกรีต">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">น้ำหนัก (ตัน)</label>
+                        <select id="jobWeight" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="0.5">0.5 ตัน</option>
+                            <option value="1.0" selected>1.0 ตัน</option>
+                            <option value="1.5">1.5 ตัน</option>
+                            <option value="2.0">2.0 ตัน</option>
+                            <option value="2.5">2.5 ตัน</option>
+                            <option value="3.0">3.0 ตัน</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">ประเภทงาน</label>
+                        <select id="jobType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="steel">เหล็ก</option>
+                            <option value="concrete">คอนกรีต</option>
+                            <option value="equipment">อุปกรณ์</option>
+                            <option value="other">อื่นๆ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">หมายเหตุ (ถ้ามี)</label>
+                    <textarea id="jobNote" rows="2"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="เช่น ต้องการเครนขนาดใหญ่, มีข้อจำกัดเวลา"></textarea>
+                </div>
+
+                <button type="submit" class="w-full liff-button">
+                    ✅ ส่งคำขอยก
+                </button>
+            </form>
+        </div>
+
+        <!-- Recent Jobs -->
+        <div class="bg-white m-4 rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">📋 งานล่าสุด</h2>
+            <div id="recentJobs">
+                <div class="text-center text-gray-500 py-4">
+                    ยังไม่มีงาน
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="flex items-center justify-center min-h-48">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            <p class="mt-4 text-gray-600">กำลังโหลด Crane System...</p>
+        </div>
+    </div>
+
+    <script>
+        // เก็บข้อมูล
+        let userProfile = null;
+        let jobs = [];
+
+        // เริ่มต้น LIFF App
+        async function initializeLiff() {
+            try {
+                // เปลี่ยน YOUR_LIFF_ID เป็น LIFF ID จริงของคุณ
+                await liff.init({ liffId: '2008208969-VxvXR048' });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+
+                // ดึงข้อมูลผู้ใช้
+                userProfile = await liff.getProfile();
+                displayUserInfo();
+                
+                // ซ่อน loading, แสดง content
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                
+                console.log('LIFF initialized successfully');
+                
+            } catch (error) {
+                console.error('LIFF initialization failed', error);
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-center text-red-600">
+                        <p>❌ เกิดข้อผิดพลาด</p>
+                        <p class="text-sm">${error.message}</p>
+                        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-green-600 text-white rounded">
+                            โหลดใหม่
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // แสดงข้อมูลผู้ใช้
+        function displayUserInfo() {
+            document.getElementById('user-picture').src = userProfile.pictureUrl;
+            document.getElementById('user-name').textContent = userProfile.displayName;
+            document.getElementById('user-status').textContent = 'พร้อมใช้งาน';
+        }
+
+        // จองเครน
+        async function bookCrane() {
+            // เลื่อนไปที่ฟอร์ม
+            document.getElementById('jobName').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('jobName').focus();
+        }
+
+        // ดูตารางงาน
+        async function viewSchedule() {
+            const message = `📅 ตารางงานวันนี้\n\n` +
+                          `🟢 งานที่กำลังดำเนินการ: 2 งาน\n` +
+                          `🟡 รอเริ่มงาน: 1 งาน\n` +
+                          `⏰ เวลารวม: 4.5 ชั่วโมง`;
+            
+            await sendMessage(message);
+        }
+
+        // แชร์แอป
+        async function shareApp() {
+            if (liff.isApiAvailable('shareTargetPicker')) {
+                try {
+                    await liff.shareTargetPicker([
+                        {
+                            type: 'text',
+                            text: `🏗️ ใช้ Crane System สำหรับจัดการงานยก\n\n` +
+                                  `สามารถจองเครน ดูตารางงาน และจัดการงานได้ง่ายๆ\n` +
+                                  `ลองใช้เลย!`
+                        }
+                    ]);
+                } catch (error) {
+                    console.log('Share cancelled');
+                }
+            } else {
+                alert('ฟังก์ชันแชร์ไม่พร้อมใช้งานในเบราว์เซอร์นี้');
+            }
+        }
+
+        // ดูแผนที่
+        function openMap() {
+            liff.openWindow({
+                url: 'https://www.google.com/maps',
+                external: true
+            });
+        }
+
+        // ส่งงานใหม่
+        async function submitJob(event) {
+            event.preventDefault();
+            
+            const jobData = {
+                name: document.getElementById('jobName').value,
+                weight: document.getElementById('jobWeight').value,
+                type: document.getElementById('jobType').value,
+                note: document.getElementById('jobNote').value,
+                user: userProfile.displayName,
+                timestamp: new Date().toLocaleString('th-TH')
+            };
+
+            // เพิ่มงานใหม่
+            jobs.unshift({
+                id: 'J' + (jobs.length + 1),
+                ...jobData,
+                status: 'pending'
+            });
+
+            // อัพเดท UI
+            updateRecentJobs();
+            
+            // ส่งข้อความแจ้งเตือน
+            const message = `📋 มีงานใหม่!\n\n` +
+                          `ชื่องาน: ${jobData.name}\n` +
+                          `น้ำหนัก: ${jobData.weight} ตัน\n` +
+                          `ประเภท: ${jobData.type}\n` +
+                          `ผู้ขอ: ${jobData.user}\n` +
+                          `เวลา: ${jobData.timestamp}`;
+            
+            await sendMessage(message);
+            
+            // รีเซ็ตฟอร์ม
+            event.target.reset();
+            
+            // แจ้งผล
+            alert('✅ ส่งคำขอยกเรียบร้อยแล้ว!');
+        }
+
+        // อัพเดทรายการงานล่าสุด
+        function updateRecentJobs() {
+            const container = document.getElementById('recentJobs');
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-4">ยังไม่มีงาน</div>';
+                return;
+            }
+            
+            container.innerHTML = jobs.slice(0, 5).map(job => `
+                <div class="border-b pb-3 mb-3">
+                    <div class="flex justify-between items-start">
+                        <div class="font-semibold">${job.name}</div>
+                        <span class="px-2 py-1 rounded text-xs ${
+                            job.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                            'bg-green-100 text-green-800'
+                        }">
+                            ${job.status === 'pending' ? 'รอดำเนินการ' : 'เสร็จสิ้น'}
+                        </span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        น้ำหนัก: ${job.weight}t | ประเภท: ${job.type}
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        โดย ${job.user} • ${job.timestamp}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ส่งข้อความ
+        async function sendMessage(message) {
+            if (liff.isInClient()) {
+                try {
+                    await liff.sendMessages([{ type: 'text', text: message }]);
+                } catch (error) {
+                    console.error('Send message failed', error);
+                }
+            } else {
+                // ถ้าไม่ได้อยู่ใน LINE Client ให้แสดงใน alert
+                alert(message);
+            }
+        }
+
+        // เริ่มต้นเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', initializeLiff);
+    </script>
+</body>
+</html>
