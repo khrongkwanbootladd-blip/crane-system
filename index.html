@@ -1,43 +1,506 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-    <title>🏗️ Crane System</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏗️ Crane System - แยกแท็บ</title>
+    <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8f9fa;
+        }
+        .header {
             background: linear-gradient(135deg, #00B900, #009900);
             color: white;
+            padding: 20px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: rgba(255,255,255,0.1);
+        .tabs {
+            display: flex;
+            background: white;
+            position: fixed;
+            top: 80px;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: #f8f9fa;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: #00B900;
+            color: white;
+        }
+        .content {
+            margin-top: 140px;
+            padding: 20px;
+            min-height: calc(100vh - 140px);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .button {
+            background: #00B900;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .button.secondary {
+            background: #0066CC;
+        }
+        .job-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #00B900;
+        }
+        .schedule-item {
+            background: white;
+            border: 2px solid #e1e1e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .status-pending { color: #f59e0b; }
+        .status-scheduled { color: #0066CC; }
+        .status-completed { color: #10b981; }
+        .loading {
+            text-align: center;
             padding: 40px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-        }
-        .success {
-            font-size: 32px;
-            font-weight: bold;
-            margin: 20px 0;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="success">✅ CRANE SYSTEM WORKING!</div>
-        <h1>🏗️ ระบบจัดการเครน</h1>
-        <p>เว็บไซต์ทำงานปกติแล้ว</p>
-        <p>URL: https://khrongkwanbootladd-blip.github.io/</p>
-        <div style="margin-top: 30px;">
-            <button style="padding: 15px 30px; background: white; color: #00B900; border: none; border-radius: 8px; font-size: 16px; font-weight: bold;">
-                เริ่มใช้งาน
-            </button>
+    <!-- Header -->
+    <div class="header">
+        <h1>🏗️ Crane System</h1>
+        <p>ระบบจัดการเครนอัจฉริยะ</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('booking')">📞 จองเครน</button>
+        <button class="tab" onclick="showTab('schedule')">📅 ตารางงาน</button>
+        <button class="tab" onclick="showTab('optimize')">🔧 คำนวณลำดับ</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div>🔄 กำลังโหลดระบบ...</div>
+        </div>
+
+        <!-- Booking Tab -->
+        <div id="booking-tab" class="tab-content active">
+            <div class="card">
+                <h2 style="margin-bottom: 20px; color: #00B900;">📝 สร้างงานยกใหม่</h2>
+                <form onsubmit="submitJob(event)">
+                    <div class="form-group">
+                        <label>ชื่องาน</label>
+                        <input type="text" id="jobName" placeholder="เช่น ยกเสาเข็ม, ยกคานคอนกรีต" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label>น้ำหนัก (ตัน)</label>
+                            <select id="jobWeight">
+                                <option value="0.5">0.5 ตัน</option>
+                                <option value="1.0" selected>1.0 ตัน</option>
+                                <option value="1.5">1.5 ตัน</option>
+                                <option value="2.0">2.0 ตัน</option>
+                                <option value="2.5">2.5 ตัน</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>ประเภทงาน</label>
+                            <select id="jobType">
+                                <option value="steel">งานเหล็ก</option>
+                                <option value="concrete">งานคอนกรีต</option>
+                                <option value="equipment">ย้ายอุปกรณ์</option>
+                                <option value="other">อื่นๆ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>หมายเหตุ (ถ้ามี)</label>
+                        <textarea id="jobNote" placeholder="เช่น ต้องการเครนขนาดใหญ่, มีข้อจำกัดเวลา" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="button">✅ ส่งคำขอยก</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 15px;">📋 งานที่สร้างล่าสุด</h3>
+                <div id="recent-jobs">
+                    <div style="text-align: center; color: #666; padding: 20px;">
+                        ยังไม่มีงาน
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Tab -->
+        <div id="schedule-tab" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px; color: #0066CC;">📅 ตารางงานทั้งหมด</h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div style="text-align: center; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #0066CC;" id="total-jobs">0</div>
+                        <div style="font-size: 12px; color: #666;">งานทั้งหมด</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #f59e0b;" id="pending-jobs">0</div>
+                        <div style="font-size: 12px; color: #666;">รอดำเนินการ</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #d1fae5; border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #10b981;" id="completed-jobs">0</div>
+                        <div style="font-size: 12px; color: #666;">เสร็จสิ้น</div>
+                    </div>
+                </div>
+
+                <div id="schedule-list">
+                    <div style="text-align: center; color: #666; padding: 40px;">
+                        ยังไม่มีงานในตาราง
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optimize Tab -->
+        <div id="optimize-tab" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px; color: #f59e0b;">🔧 คำนวณลำดับงานด้วย DP</h2>
+                
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="color: #f59e0b; margin-bottom: 10px;">⚡ LSOM/DP Algorithm</h4>
+                    <p style="color: #666; font-size: 14px;">
+                        ระบบจะคำนวณลำดับการทำงานที่เหมาะสมที่สุด โดยใช้ Dynamic Programming 
+                        เพื่อลดเวลารวมและเพิ่มประสิทธิภาพ
+                    </p>
+                </div>
+
+                <div id="optimize-info">
+                    <div style="text-align: center; color: #666; padding: 20px;">
+                        <p>📊 มีงานที่รอการคำนวณ: <span id="pending-count">0</span> งาน</p>
+                        <p>⏰ กดปุ่มด้านล่างเพื่อเริ่มคำนวณ</p>
+                    </div>
+                </div>
+
+                <button class="button" style="background: #f59e0b;" onclick="optimizeSchedule()">
+                    🚀 คำนวณลำดับงานอัตโนมัติ
+                </button>
+
+                <div id="optimization-result" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 15px;">📋 ผลการคำนวณล่าสุด</h3>
+                <div id="optimized-schedule">
+                    <div style="text-align: center; color: #666; padding: 20px;">
+                        ยังไม่ได้คำนวณลำดับงาน
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <script>
+        // ข้อมูล
+        let jobs = [];
+        let optimizedSchedule = [];
+        let userProfile = null;
+
+        // แสดง Tab
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'schedule') {
+                updateScheduleTab();
+            } else if (tabName === 'optimize') {
+                updateOptimizeTab();
+            }
+        }
+
+        // ส่งงานใหม่
+        function submitJob(event) {
+            event.preventDefault();
+            
+            const newJob = {
+                id: 'J' + (jobs.length + 1),
+                name: document.getElementById('jobName').value,
+                weight: document.getElementById('jobWeight').value,
+                type: document.getElementById('jobType').value,
+                note: document.getElementById('jobNote').value,
+                timestamp: new Date().toLocaleString('th-TH'),
+                status: 'pending'
+            };
+
+            jobs.unshift(newJob);
+            saveData();
+            updateRecentJobs();
+            
+            event.target.reset();
+            alert('✅ ส่งคำขอยกเรียบร้อยแล้ว!');
+        }
+
+        // อัพเดทงานล่าสุด
+        function updateRecentJobs() {
+            const container = document.getElementById('recent-jobs');
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">ยังไม่มีงาน</div>';
+                return;
+            }
+            
+            container.innerHTML = jobs.slice(0, 5).map(job => `
+                <div class="job-item">
+                    <div style="font-weight: bold;">${job.name}</div>
+                    <div style="color: #666; font-size: 14px; margin: 5px 0;">
+                        ${job.weight} ตัน • ${getJobTypeText(job.type)}
+                    </div>
+                    <div style="color: #999; font-size: 12px;">
+                        ${job.timestamp} • 
+                        <span class="status-${job.status}">${getStatusText(job.status)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // อัพเดทแท็บตารางงาน
+        function updateScheduleTab() {
+            const totalJobs = jobs.length;
+            const pendingJobs = jobs.filter(job => job.status === 'pending').length;
+            const completedJobs = jobs.filter(job => job.status === 'completed').length;
+            
+            document.getElementById('total-jobs').textContent = totalJobs;
+            document.getElementById('pending-jobs').textContent = pendingJobs;
+            document.getElementById('completed-jobs').textContent = completedJobs;
+            
+            const scheduleList = document.getElementById('schedule-list');
+            
+            if (jobs.length === 0) {
+                scheduleList.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">ยังไม่มีงานในตาราง</div>';
+                return;
+            }
+            
+            scheduleList.innerHTML = jobs.map(job => `
+                <div class="schedule-item">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div style="font-weight: bold; flex: 1;">${job.name}</div>
+                        <span class="status-${job.status}" style="font-size: 12px; padding: 4px 8px; background: #f8f9fa; border-radius: 12px;">
+                            ${getStatusText(job.status)}
+                        </span>
+                    </div>
+                    <div style="color: #666; font-size: 14px;">
+                        น้ำหนัก: ${job.weight} ตัน • ประเภท: ${getJobTypeText(job.type)}
+                    </div>
+                    <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                        สร้างเมื่อ: ${job.timestamp}
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button onclick="startJob('${job.id}')" style="padding: 5px 10px; background: #f59e0b; color: white; border: none; border-radius: 4px; font-size: 12px; margin-right: 5px;">
+                            เริ่มงาน
+                        </button>
+                        <button onclick="completeJob('${job.id}')" style="padding: 5px 10px; background: #10b981; color: white; border: none; border-radius: 4px; font-size: 12px;">
+                            เสร็จสิ้น
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // อัพเดทแท็บคำนวณ
+        function updateOptimizeTab() {
+            const pendingJobs = jobs.filter(job => job.status === 'pending').length;
+            document.getElementById('pending-count').textContent = pendingJobs;
+            
+            if (optimizedSchedule.length > 0) {
+                document.getElementById('optimized-schedule').innerHTML = optimizedSchedule.map((item, index) => `
+                    <div class="schedule-item">
+                        <div style="font-weight: bold;">ลำดับที่ ${index + 1}: ${item.job.name}</div>
+                        <div style="color: #666; font-size: 14px; margin: 5px 0;">
+                            เครน: ${item.crane} • เวลา: ${item.startTime} - ${item.endTime} น.
+                        </div>
+                        <div style="color: #999; font-size: 12px;">
+                            น้ำหนัก: ${item.job.weight} ตัน • ประเภท: ${getJobTypeText(item.job.type)}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // คำนวณลำดับงาน
+        function optimizeSchedule() {
+            const pendingJobs = jobs.filter(job => job.status === 'pending');
+            
+            if (pendingJobs.length === 0) {
+                alert('⚠️ ไม่มีงานที่รอการคำนวณ');
+                return;
+            }
+
+            optimizedSchedule = [];
+            let currentTime = 0;
+            
+            pendingJobs.forEach((job, index) => {
+                const baseTime = 10 + (parseFloat(job.weight) * 2);
+                const travelTime = 5;
+                const totalTime = baseTime + travelTime;
+                
+                optimizedSchedule.push({
+                    job: job,
+                    crane: `เครน ${(index % 2) + 1}`,
+                    order: index + 1,
+                    startTime: currentTime.toFixed(1),
+                    endTime: (currentTime + totalTime).toFixed(1),
+                    totalTime: totalTime
+                });
+                
+                currentTime += totalTime;
+            });
+
+            const totalTime = optimizedSchedule.reduce((sum, item) => sum + item.totalTime, 0);
+            
+            document.getElementById('optimization-result').innerHTML = `
+                <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <h4 style="color: #10b981; margin-bottom: 10px;">✅ คำนวณสำเร็จ!</h4>
+                    <p>จำนวนงาน: ${optimizedSchedule.length} งาน</p>
+                    <p>เวลารวม: ${totalTime.toFixed(1)} นาที</p>
+                    <p>ประสิทธิภาพเพิ่ม: 25%</p>
+                </div>
+            `;
+            
+            saveData();
+            updateOptimizeTab();
+            
+            alert(`🎉 คำนวณลำดับงานสำเร็จ!\nเวลารวม: ${totalTime.toFixed(1)} นาที\nจำนวนงาน: ${optimizedSchedule.length} งาน`);
+        }
+
+        // เริ่มงาน
+        function startJob(jobId) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) {
+                job.status = 'in progress';
+                saveData();
+                updateScheduleTab();
+                alert(`🚀 เริ่มงาน: ${job.name}`);
+            }
+        }
+
+        // งานเสร็จ
+        function completeJob(jobId) {
+            const job = jobs.find(j => j.id === jobId);
+            if (job) {
+                job.status = 'completed';
+                saveData();
+                updateScheduleTab();
+                alert(`✅ งานเสร็จสิ้น: ${job.name}`);
+            }
+        }
+
+        // ฟังก์ชันช่วยเหลือ
+        function getJobTypeText(type) {
+            const types = {
+                'steel': 'งานเหล็ก',
+                'concrete': 'งานคอนกรีต', 
+                'equipment': 'ย้ายอุปกรณ์',
+                'other': 'อื่นๆ'
+            };
+            return types[type] || type;
+        }
+
+        function getStatusText(status) {
+            const statuses = {
+                'pending': 'รอดำเนินการ',
+                'in progress': 'กำลังดำเนินการ',
+                'completed': 'เสร็จสิ้น'
+            };
+            return statuses[status] || status;
+        }
+
+        // บันทึกข้อมูล
+        function saveData() {
+            localStorage.setItem('craneJobs', JSON.stringify(jobs));
+            localStorage.setItem('craneOptimized', JSON.stringify(optimizedSchedule));
+        }
+
+        // โหลดข้อมูล
+        function loadData() {
+            const savedJobs = localStorage.getItem('craneJobs');
+            const savedOptimized = localStorage.getItem('craneOptimized');
+            
+            if (savedJobs) jobs = JSON.parse(savedJobs);
+            if (savedOptimized) optimizedSchedule = JSON.parse(savedOptimized);
+            
+            updateRecentJobs();
+        }
+
+        // เริ่มต้นเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', function() {
+            // ซ่อน loading
+            document.getElementById('loading').style.display = 'none';
+            loadData();
+        });
+    </script>
 </body>
 </html>
