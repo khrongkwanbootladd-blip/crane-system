@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏗️ Crane System + LINE Group</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .leaflet-container { height: 400px; width: 100%; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-scheduled { background: #dbeafe; color: #1e40af; }
+        .status-completed { background: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-green-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <h1 class="text-3xl font-bold">🏗️ ระบบเครน + LINE Group</h1>
+            <p class="text-green-100">ใช้งานในกลุ่ม LINE ได้แล้ว!</p>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-8 overflow-x-auto">
+                <button onclick="showTab('main')" class="tab-button py-4 px-2 font-medium border-b-2 border-green-500 text-green-600">
+                    🏠 หน้าหลัก
+                </button>
+                <button onclick="showTab('line-group')" class="tab-button py-4 px-2 font-medium border-b-2 border-transparent text-gray-500">
+                    👥 ตั้งค่า LINE Group
+                </button>
+                <button onclick="showTab('simulate')" class="tab-button py-4 px-2 font-medium border-b-2 border-transparent text-gray-500">
+                    💬 ทดสอบบอท
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- Main Tab -->
+        <div id="main-tab" class="tab-content active">
+            <!-- สร้างงานใหม่ -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">➕ สร้างงานยกใหม่</h2>
+                <form onsubmit="createJob(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">ชื่องาน</label>
+                        <input type="text" id="job-name" required 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            placeholder="เช่น ยกเสาเข็ม">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">น้ำหนัก (ตัน)</label>
+                        <input type="number" step="0.1" id="weight" required value="1.5"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="submit" 
+                            class="w-full bg-green-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-green-700">
+                            ✅ สร้างงาน
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ตารางงาน -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">📅 ตารางงานวันนี้</h2>
+                    <button onclick="optimizeSchedule()" 
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700">
+                        🔄 คำนวณลำดับงาน
+                    </button>
+                </div>
+
+                <div id="schedule-list" class="space-y-3">
+                    <div class="text-center text-gray-500 py-8">
+                        ยังไม่มีงาน ⚠️ สร้างงานใหม่ด้านบนเลย!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LINE Group Setup Tab -->
+        <div id="line-group-tab" class="tab-content">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">👥 วิธีเพิ่มบอทเข้า LINE Group</h2>
+                
+                <div class="space-y-6">
+                    <!-- วิธีที่ 1 -->
+                    <div class="border-l-4 border-green-500 pl-4">
+                        <h3 class="text-lg font-semibold mb-3">1. 📱 สแกน QR Code</h3>
+                        <div class="bg-gray-100 p-4 rounded-lg inline-block">
+                            <div class="w-48 h-48 bg-white border-2 border-dashed border-gray-300 flex items-center justify-center">
+                                <span class="text-gray-500">QR Code</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-3">
+                            - เปิด LINE → เพิ่มเพื่อน → QR Code<br>
+                            - สแกน QR Code ด้านบน
+                        </p>
+                    </div>
+
+                    <!-- วิธีที่ 2 -->
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <h3 class="text-lg font-semibold mb-3">2. 🔗 ค้นหาด้วย ID</h3>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="font-mono text-lg text-center">@cranesystem</p>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-3">
+                            - เปิด LINE → เพิ่มเพื่อน → ค้นหาโดย ID<br>
+                            - พิมพ์: <strong>@cranesystem</strong>
+                        </p>
+                    </div>
+
+                    <!-- คำสั่งใน Group -->
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <h3 class="text-lg font-semibold mb-3">3. 🎯 คำสั่งใน Group</h3>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="space-y-2">
+                                <div><code>!ตาราง</code> - ดูตารางงาน</div>
+                                <div><code>!จองเครน</code> - สร้างงานใหม่</div>
+                                <div><code>!สถานะ J1</code> - ดูสถานะงาน</div>
+                                <div><code>!help</code> - ดูคำสั่งทั้งหมด</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulate Tab -->
+        <div id="simulate-tab" class="tab-content">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">💬 จำลองการทำงานใน LINE</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- ฝั่ง User -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-4">👤 ผู้ใช้ส่งคำสั่ง</h3>
+                        <div class="space-y-2">
+                            <button onclick="simulateMessage('!ตาราง')" class="w-full bg-green-500 text-white py-2 rounded">
+                                !ตาราง
+                            </button>
+                            <button onclick="simulateMessage('!จองเครน')" class="w-full bg-blue-500 text-white py-2 rounded">
+                                !จองเครน
+                            </button>
+                            <button onclick="simulateMessage('!สถานะ J1')" class="w-full bg-purple-500 text-white py-2 rounded">
+                                !สถานะ J1
+                            </button>
+                            <button onclick="simulateMessage('!help')" class="w-full bg-gray-500 text-white py-2 rounded">
+                                !help
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ฝั่ง Bot -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-4">🤖 บอทตอบกลับ</h3>
+                        <div id="bot-response" class="bg-gray-100 p-4 rounded min-h-32">
+                            กดปุ่มด้านซ้ายเพื่อดูการตอบกลับ
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ข้อมูลตัวอย่าง
+        let jobs = [];
+        let schedule = [];
+
+        // ฟังก์ชันแสดง Tab
+        function showTab(tabName) {
+            // ซ่อนทั้งหมด
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // ลบ active state จากปุ่มทั้งหมด
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('border-green-500', 'text-green-600');
+                button.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // แสดง Tab ที่เลือก
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // ตั้งค่า active state ให้ปุ่ม
+            event.target.classList.remove('border-transparent', 'text-gray-500');
+            event.target.classList.add('border-green-500', 'text-green-600');
+        }
+
+        // สร้างงานใหม่
+        function createJob(event) {
+            event.preventDefault();
+            
+            const jobName = document.getElementById('job-name').value;
+            const weight = document.getElementById('weight').value;
+            
+            const newJob = {
+                id: 'J' + (jobs.length + 1),
+                name: jobName,
+                weight: parseFloat(weight),
+                status: 'pending'
+            };
+            
+            jobs.push(newJob);
+            
+            // รีเซ็ตฟอร์ม
+            document.getElementById('job-name').value = '';
+            document.getElementById('weight').value = '1.5';
+            
+            // อัพเดท UI
+            updateSchedule();
+            
+            alert('✅ สร้างงาน "' + jobName + '" เรียบร้อยแล้ว!');
+        }
+
+        // คำนวณลำดับงาน
+        function optimizeSchedule() {
+            if (jobs.length === 0) {
+                alert('⚠️ ยังไม่มีงานที่จะคำนวณ');
+                return;
+            }
+
+            schedule = [];
+            let totalTime = 0;
+            
+            jobs.forEach((job, index) => {
+                const taskTime = 10 + (job.weight * 2); // เวลาพื้นฐาน
+                
+                schedule.push({
+                    job: job,
+                    order: index + 1,
+                    startTime: totalTime,
+                    endTime: totalTime + taskTime,
+                    status: 'scheduled'
+                });
+                
+                totalTime += taskTime;
+                job.status = 'scheduled';
+            });
+
+            updateSchedule();
+            alert('✅ คำนวณลำดับงานเสร็จสิ้น!\nเวลารวม: ' + totalTime + ' นาที');
+        }
+
+        // อัพเดทตารางงาน
+        function updateSchedule() {
+            const scheduleList = document.getElementById('schedule-list');
+            
+            if (schedule.length === 0) {
+                scheduleList.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        ยังไม่มีงาน ⚠️ สร้างงานใหม่ด้านบนเลย!
+                    </div>
+                `;
+                return;
+            }
+            
+            scheduleList.innerHTML = '';
+            
+            schedule.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'border rounded-lg p-4 bg-white shadow-sm';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-semibold text-lg">
+                            ${item.order}. ${item.job.name}
+                        </h3>
+                        <span class="px-3 py-1 rounded-full status-${item.status} text-sm font-medium">
+                            ${item.status === 'scheduled' ? '⏳ กำหนดแล้ว' : '✅ เสร็จสิ้น'}
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div><strong>น้ำหนัก:</strong> ${item.job.weight}t</div>
+                        <div><strong>เริ่ม:</strong> ${item.startTime} น.</div>
+                        <div><strong>เสร็จ:</strong> ${item.endTime} น.</div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <button onclick="startJob('${item.job.id}')" class="bg-orange-500 text-white px-3 py-1 rounded text-sm">
+                            เริ่มงาน
+                        </button>
+                        <button onclick="completeJob('${item.job.id}')" class="bg-green-500 text-white px-3 py-1 rounded text-sm">
+                            เสร็จสิ้น
+                        </button>
+                    </div>
+                `;
+                scheduleList.appendChild(div);
+            });
+        }
+
+        // เริ่มงาน
+        function startJob(jobId) {
+            const item = schedule.find(item => item.job.id === jobId);
+            if (item) {
+                item.status = 'in progress';
+                updateSchedule();
+                alert('🚀 เริ่มงาน: ' + item.job.name);
+            }
+        }
+
+        // งานเสร็จ
+        function completeJob(jobId) {
+            const job = jobs.find(j => j.id === jobId);
+            const item = schedule.find(item => item.job.id === jobId);
+            
+            if (job && item) {
+                job.status = 'completed';
+                item.status = 'completed';
+                updateSchedule();
+                alert('✅ งานเสร็จสิ้น: ' + job.name);
+            }
+        }
+
+        // จำลองการส่งข้อความ
+        function simulateMessage(command) {
+            const responseDiv = document.getElementById('bot-response');
+            
+            if (command === '!ตาราง') {
+                responseDiv.innerHTML = `
+                    <div class="bg-green-100 border border-green-300 rounded p-3">
+                        <strong>📅 ตารางงานวันนี้</strong><br>
+                        ${schedule.length > 0 ? 
+                            schedule.map(item => 
+                                `#${item.order} ${item.job.name} (${item.startTime}-${item.endTime}น.)`
+                            ).join('<br>') 
+                            : 'ยังไม่มีงานในตาราง'
+                        }
+                    </div>
+                `;
+            }
+            else if (command === '!จองเครน') {
+                responseDiv.innerHTML = `
+                    <div class="bg-blue-100 border border-blue-300 rounded p-3">
+                        <strong>📞 การจองเครน</strong><br>
+                        กรุณาส่ง Location 2 จุด (จุดรับและจุดส่ง) และระบุน้ำหนัก<br>
+                        หรือพิมพ์ "จองเครน" ในแชทส่วนตัวกับบอท
+                    </div>
+                `;
+            }
+            else if (command === '!สถานะ J1') {
+                const job = jobs.find(j => j.id === 'J1');
+                responseDiv.innerHTML = `
+                    <div class="bg-purple-100 border border-purple-300 rounded p-3">
+                        <strong>📊 สถานะงาน J1</strong><br>
+                        ${job ? `งาน: ${job.name}<br>สถานะ: ${job.status}<br>น้ำหนัก: ${job.weight}t` : 'ไม่พบงาน J1'}
+                    </div>
+                `;
+            }
+            else if (command === '!help') {
+                responseDiv.innerHTML = `
+                    <div class="bg-gray-100 border border-gray-300 rounded p-3">
+                        <strong>🆘 คำสั่งทั้งหมด</strong><br>
+                        <code>!ตาราง</code> - ดูตารางงาน<br>
+                        <code>!จองเครน</code> - สร้างงานใหม่<br>
+                        <code>!สถานะ [ID]</code> - ดูสถานะงาน<br>
+                        <code>!help</code> - แสดงคำสั่งนี้
+                    </div>
+                `;
+            }
+        }
+
+        // โหลดครั้งแรก
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSchedule();
+        });
+    </script>
+</body>
+</html>
